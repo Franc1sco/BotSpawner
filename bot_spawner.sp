@@ -1,6 +1,6 @@
 /*  SM Bot Spawner
  *
- *  Copyright (C) 2017 Francisco 'Franc1sco' García
+ *  Copyright (C) 2017-2022 Francisco 'Franc1sco' García
  * 
  * This program is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the Free
@@ -24,7 +24,7 @@
 #include <cstrike>
 #define REQUIRE_EXTENSIONS
 
-#define PLUGIN_VERSION "1.0"
+#define PLUGIN_VERSION "2.0b"
 
 #pragma newdecls required
 
@@ -60,6 +60,38 @@ public void OnPluginStart()
 
 public Action Bot(int client,int args)
 { 
+	if (args > 2)
+	{
+		char szArgs[32];
+		float origin[3];
+		GetCmdArg(1,szArgs,sizeof(szArgs));
+		origin[0] = StringToFloat(szArgs);
+		GetCmdArg(2,szArgs,sizeof(szArgs));
+		origin[1] = StringToFloat(szArgs);
+		GetCmdArg(3,szArgs,sizeof(szArgs));
+		origin[2] = StringToFloat(szArgs);
+		
+		char botname[128];
+		Format(botname, sizeof(botname), "Spawned (%i)", GetArraySize(g_bots)+1);
+		
+		int ent = CreateFakeClient(botname);
+			
+		if(ent == -1)
+			return Plugin_Handled;
+			
+		PushArrayCell(g_bots, GetClientUserId(ent));
+		ChangeClientTeam(ent, GetClientTeam(client) == 2 ? 3:2);
+		
+		if(game == Engine_CSGO || game == Engine_CSS)
+			CS_RespawnPlayer(ent);
+		if(game == Engine_TF2)
+			TF2_RespawnPlayer(ent);
+			
+		TeleportEntity(ent, origin, NULL_VECTOR, NULL_VECTOR); 
+		
+		return Plugin_Handled;
+	}
+	
 	if(client == 0)
 	{
 		PrintToServer("%t","Command is in-game only");
@@ -116,15 +148,11 @@ public void OnClientDisconnect(int client)
 
 public Action NoBot(int client,int args)
 { 
-	if(client == 0)
-	{
-		PrintToServer("%t","Command is in-game only");
-		return Plugin_Handled;
-	}
-	
 	if(GetArraySize(g_bots) == 0)
 	{
-		PrintToChat(client, " \x04[BotSpawner] \x01No bots spawned by the !bot command.");
+		if (client > 0) PrintToChat(client, " \x04[BotSpawner] \x01No bots spawned by the !bot command.");
+		else ReplyToCommand(client, "No bots spawned by the !bot command.");
+		
 		return Plugin_Handled;
 	}
 	int botindex;

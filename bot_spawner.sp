@@ -24,7 +24,7 @@
 #include <cstrike>
 #define REQUIRE_EXTENSIONS
 
-#define PLUGIN_VERSION "2.0b"
+#define PLUGIN_VERSION "2.0"
 
 #pragma newdecls required
 

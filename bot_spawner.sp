@@ -24,7 +24,7 @@
 #include <cstrike>
 #define REQUIRE_EXTENSIONS
 
-#define PLUGIN_VERSION "2.0"
+#define PLUGIN_VERSION "2.0.1"
 
 #pragma newdecls required
 
@@ -60,8 +60,8 @@ public void OnPluginStart()
 
 public Action Bot(int client,int args)
 { 
-	if (args > 2)
-	{
+	if (args == 3) {
+		
 		char szArgs[32];
 		float origin[3];
 		GetCmdArg(1,szArgs,sizeof(szArgs));
@@ -90,49 +90,55 @@ public Action Bot(int client,int args)
 		TeleportEntity(ent, origin, NULL_VECTOR, NULL_VECTOR); 
 		
 		return Plugin_Handled;
-	}
+		
+	} else if (args == 0) {
+		
+		if(client == 0)
+		{
+			PrintToServer("%t","Command is in-game only");
+			return Plugin_Handled;
+		}
 	
-	if(client == 0)
-	{
-		PrintToServer("%t","Command is in-game only");
+		float start[3], angle[3], end[3], normal[3]; 
+		GetClientEyePosition(client, start); 
+		GetClientEyeAngles(client, angle); 
+	     
+		TR_TraceRayFilter(start, angle, MASK_SOLID, RayType_Infinite, RayDontHitSelf, client); 
+		if (TR_DidHit(INVALID_HANDLE)) 
+		{ 
+			TR_GetEndPosition(end, INVALID_HANDLE); 
+			TR_GetPlaneNormal(INVALID_HANDLE, normal); 
+			GetVectorAngles(normal, normal); 
+			normal[0] += 90.0; 
+			
+			char botname[128];
+			Format(botname, sizeof(botname), "Spawned (%i)", GetArraySize(g_bots)+1);
+			
+			int ent = CreateFakeClient(botname);
+				
+			if(ent == -1)
+				return Plugin_Handled;
+				
+			PushArrayCell(g_bots, GetClientUserId(ent));
+			ChangeClientTeam(ent, GetClientTeam(client) == 2 ? 3:2);
+			
+			if(game == Engine_CSGO || game == Engine_CSS)
+				CS_RespawnPlayer(ent);
+			if(game == Engine_TF2)
+				TF2_RespawnPlayer(ent);
+				
+			TeleportEntity(ent, end, normal, NULL_VECTOR); 
+	
+		} 
+	
+		PrintToChat(client, " \x04[BotSpawner] \x01You have spawned a bot");
+	
 		return Plugin_Handled;
 	}
-
-	float start[3], angle[3], end[3], normal[3]; 
-	GetClientEyePosition(client, start); 
-	GetClientEyeAngles(client, angle); 
-     
-	TR_TraceRayFilter(start, angle, MASK_SOLID, RayType_Infinite, RayDontHitSelf, client); 
-	if (TR_DidHit(INVALID_HANDLE)) 
-	{ 
-		TR_GetEndPosition(end, INVALID_HANDLE); 
-		TR_GetPlaneNormal(INVALID_HANDLE, normal); 
-		GetVectorAngles(normal, normal); 
-		normal[0] += 90.0; 
-		
-		char botname[128];
-		Format(botname, sizeof(botname), "Spawned (%i)", GetArraySize(g_bots)+1);
-		
-		int ent = CreateFakeClient(botname);
-			
-		if(ent == -1)
-			return Plugin_Handled;
-			
-		PushArrayCell(g_bots, GetClientUserId(ent));
-		ChangeClientTeam(ent, GetClientTeam(client) == 2 ? 3:2);
-		
-		if(game == Engine_CSGO || game == Engine_CSS)
-			CS_RespawnPlayer(ent);
-		if(game == Engine_TF2)
-			TF2_RespawnPlayer(ent);
-			
-		TeleportEntity(ent, end, normal, NULL_VECTOR); 
-
-	} 
-
-	PrintToChat(client, " \x04[BotSpawner] \x01You have spawned a bot");
-
-	return Plugin_Handled;
+	else {
+		ReplyToCommand(client, "[SM] Usage: sm_bot [x] [y] [z] or sm_bot");
+		return Plugin_Handled;	
+	}
 }  
 
 public void OnClientDisconnect(int client)

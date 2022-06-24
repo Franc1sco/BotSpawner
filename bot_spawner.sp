@@ -24,7 +24,7 @@
 #include <cstrike>
 #define REQUIRE_EXTENSIONS
 
-#define PLUGIN_VERSION "2.0.1"
+#define PLUGIN_VERSION "2.1.0"
 
 #pragma newdecls required
 
@@ -51,6 +51,8 @@ public void OnPluginStart()
 	CreateConVar("sm_botspawner_version", PLUGIN_VERSION, "", FCVAR_SPONLY|FCVAR_NOTIFY);
 
 	RegAdminCmd("sm_bot", Bot, ADMFLAG_ROOT);
+	RegAdminCmd("sm_ctbot", ctBot, ADMFLAG_ROOT);
+	RegAdminCmd("sm_tbot", tBot, ADMFLAG_ROOT);
 	RegAdminCmd("sm_nobot", NoBot, ADMFLAG_ROOT);
 
 	LoadTranslations("common.phrases");
@@ -80,7 +82,10 @@ public Action Bot(int client,int args)
 			return Plugin_Handled;
 			
 		PushArrayCell(g_bots, GetClientUserId(ent));
-		ChangeClientTeam(ent, GetClientTeam(client) == 2 ? 3:2);
+		int team = 0;
+		if (client == 0)team = GetRandomInt(2, 3);
+		else team = GetClientTeam(client) == 2 ? 3:2;
+		ChangeClientTeam(ent, team);
 		
 		if(game == Engine_CSGO || game == Engine_CSS)
 			CS_RespawnPlayer(ent);
@@ -137,6 +142,181 @@ public Action Bot(int client,int args)
 	}
 	else {
 		ReplyToCommand(client, "[SM] Usage: sm_bot [x] [y] [z] or sm_bot");
+		return Plugin_Handled;	
+	}
+}  
+
+public Action ctBot(int client,int args)
+{ 
+	if (args == 3) {
+		
+		char szArgs[32];
+		float origin[3];
+		GetCmdArg(1,szArgs,sizeof(szArgs));
+		origin[0] = StringToFloat(szArgs);
+		GetCmdArg(2,szArgs,sizeof(szArgs));
+		origin[1] = StringToFloat(szArgs);
+		GetCmdArg(3,szArgs,sizeof(szArgs));
+		origin[2] = StringToFloat(szArgs);
+		
+		char botname[128];
+		Format(botname, sizeof(botname), "Spawned (%i)", GetArraySize(g_bots)+1);
+		
+		int ent = CreateFakeClient(botname);
+			
+		if(ent == -1)
+			return Plugin_Handled;
+			
+		PushArrayCell(g_bots, GetClientUserId(ent));
+		ChangeClientTeam(ent, CS_TEAM_CT);
+		
+		if(game == Engine_CSGO || game == Engine_CSS) {
+			ChangeClientTeam(ent, CS_TEAM_CT);
+			CS_RespawnPlayer(ent);
+		} else if(game == Engine_TF2) {
+			ChangeClientTeam(ent, view_as<int>(TFTeam_Blue));
+			TF2_RespawnPlayer(ent);
+		}
+			
+		TeleportEntity(ent, origin, NULL_VECTOR, NULL_VECTOR); 
+		
+		return Plugin_Handled;
+		
+	} else if (args == 0) {
+		
+		if(client == 0)
+		{
+			PrintToServer("%t","Command is in-game only");
+			return Plugin_Handled;
+		}
+	
+		float start[3], angle[3], end[3], normal[3]; 
+		GetClientEyePosition(client, start); 
+		GetClientEyeAngles(client, angle); 
+	     
+		TR_TraceRayFilter(start, angle, MASK_SOLID, RayType_Infinite, RayDontHitSelf, client); 
+		if (TR_DidHit(INVALID_HANDLE)) 
+		{ 
+			TR_GetEndPosition(end, INVALID_HANDLE); 
+			TR_GetPlaneNormal(INVALID_HANDLE, normal); 
+			GetVectorAngles(normal, normal); 
+			normal[0] += 90.0; 
+			
+			char botname[128];
+			Format(botname, sizeof(botname), "Spawned (%i)", GetArraySize(g_bots)+1);
+			
+			int ent = CreateFakeClient(botname);
+				
+			if(ent == -1)
+				return Plugin_Handled;
+				
+			PushArrayCell(g_bots, GetClientUserId(ent));
+			
+			if(game == Engine_CSGO || game == Engine_CSS) {
+				ChangeClientTeam(ent, CS_TEAM_CT);
+				CS_RespawnPlayer(ent);
+			} else if(game == Engine_TF2) {
+				ChangeClientTeam(ent, view_as<int>(TFTeam_Blue));
+				TF2_RespawnPlayer(ent);
+			}
+				
+			TeleportEntity(ent, end, normal, NULL_VECTOR); 
+	
+		} 
+	
+		PrintToChat(client, " \x04[BotSpawner] \x01You have spawned a bot");
+	
+		return Plugin_Handled;
+	}
+	else {
+		ReplyToCommand(client, "[SM] Usage: sm_ctbot [x] [y] [z] or sm_bot");
+		return Plugin_Handled;	
+	}
+}  
+
+public Action tBot(int client,int args)
+{ 
+	if (args == 3) {
+		
+		char szArgs[32];
+		float origin[3];
+		GetCmdArg(1,szArgs,sizeof(szArgs));
+		origin[0] = StringToFloat(szArgs);
+		GetCmdArg(2,szArgs,sizeof(szArgs));
+		origin[1] = StringToFloat(szArgs);
+		GetCmdArg(3,szArgs,sizeof(szArgs));
+		origin[2] = StringToFloat(szArgs);
+		
+		char botname[128];
+		Format(botname, sizeof(botname), "Spawned (%i)", GetArraySize(g_bots)+1);
+		
+		int ent = CreateFakeClient(botname);
+			
+		if(ent == -1)
+			return Plugin_Handled;
+			
+		PushArrayCell(g_bots, GetClientUserId(ent));
+
+		if(game == Engine_CSGO || game == Engine_CSS) {
+			ChangeClientTeam(ent, CS_TEAM_T);
+			CS_RespawnPlayer(ent);
+		} else if(game == Engine_TF2) {
+			ChangeClientTeam(ent, view_as<int>(TFTeam_Red));
+			TF2_RespawnPlayer(ent);
+		}
+			
+		TeleportEntity(ent, origin, NULL_VECTOR, NULL_VECTOR); 
+		
+		return Plugin_Handled;
+		
+	} else if (args == 0) {
+		
+		if(client == 0)
+		{
+			PrintToServer("%t","Command is in-game only");
+			return Plugin_Handled;
+		}
+	
+		float start[3], angle[3], end[3], normal[3]; 
+		GetClientEyePosition(client, start); 
+		GetClientEyeAngles(client, angle); 
+	     
+		TR_TraceRayFilter(start, angle, MASK_SOLID, RayType_Infinite, RayDontHitSelf, client); 
+		if (TR_DidHit(INVALID_HANDLE)) 
+		{ 
+			TR_GetEndPosition(end, INVALID_HANDLE); 
+			TR_GetPlaneNormal(INVALID_HANDLE, normal); 
+			GetVectorAngles(normal, normal); 
+			normal[0] += 90.0; 
+			
+			char botname[128];
+			Format(botname, sizeof(botname), "Spawned (%i)", GetArraySize(g_bots)+1);
+			
+			int ent = CreateFakeClient(botname);
+				
+			if(ent == -1)
+				return Plugin_Handled;
+				
+			PushArrayCell(g_bots, GetClientUserId(ent));
+			
+			if(game == Engine_CSGO || game == Engine_CSS) {
+				ChangeClientTeam(ent, CS_TEAM_T);
+				CS_RespawnPlayer(ent);
+			} else if(game == Engine_TF2) {
+				ChangeClientTeam(ent, view_as<int>(TFTeam_Red));
+				TF2_RespawnPlayer(ent);
+			}
+				
+			TeleportEntity(ent, end, normal, NULL_VECTOR); 
+	
+		} 
+	
+		PrintToChat(client, " \x04[BotSpawner] \x01You have spawned a bot");
+	
+		return Plugin_Handled;
+	}
+	else {
+		ReplyToCommand(client, "[SM] Usage: sm_tbot [x] [y] [z] or sm_bot");
 		return Plugin_Handled;	
 	}
 }  
